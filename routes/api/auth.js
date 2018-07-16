@@ -19,6 +19,7 @@ const passport = require("passport");
 
 // Load Input Validation
 const validateRegisterInput = require("../../validation/register");
+const validateLoginInput = require("../../validation/login");
 
 // @route GET api/auth/test
 // @desc Tests auth route
@@ -74,6 +75,13 @@ router.post("/register", (req, res) => {
 // @access Public
 
 router.post("/login", (req, res) => {
+  // pull out the errors and the isValid function via destructuring
+  const { errors, isValid } = validateLoginInput(req.body);
+  // Check validation
+  if (!isValid) {
+    return res.status(400).json(errors);
+  }
+
   const email = req.body.email;
   const password = req.body.password;
 
@@ -83,7 +91,8 @@ router.post("/login", (req, res) => {
     .then(user => {
       // Check if there's a user, if there is not, send an error status of 404 and a json message
       if (!user) {
-        return res.status(404).json({ email: "User email not found" });
+        errors.email = "User not found";
+        return res.status(404).json(errors);
       }
       // Because the password in our database has been hashed with Bcrypt, we are going
       // to use Bcrypt again to compare the password our user has entered to login
@@ -108,7 +117,8 @@ router.post("/login", (req, res) => {
           );
           // if the two passwords do not match, send back a status of 404 and a message
         } else {
-          return res.status(400).json({ password: "Password incorrect." });
+          errors.password = "Password incorrect";
+          return res.status(400).json(errors);
         }
       });
     });
