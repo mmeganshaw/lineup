@@ -17,6 +17,9 @@ const bcrypt = require("bcryptjs");
 // Bringing in passport
 const passport = require("passport");
 
+// Load Input Validation
+const validateRegisterInput = require("../../validation/register");
+
 // @route GET api/auth/test
 // @desc Tests auth route
 // @access Public
@@ -27,9 +30,17 @@ router.get("/test", (req, res) => res.json({ msg: "users works" }));
 // @access Public
 
 router.post("/register", (req, res) => {
+  // pull out the errors and the isValid function via destructuring
+  const { errors, isValid } = validateRegisterInput(req.body);
+  // Check validation
+  if (!isValid) {
+    return res.status(400).json(errors);
+  }
+
   User.findOne({ email: req.body.email }).then(user => {
     if (user) {
-      return res.status(400).json({ email: "Email exists! oops!" });
+      errors.email = "Email already exists";
+      return res.status(400).json(errors);
     } else {
       const avatar = gravatar.url(req.body.email, {
         s: "200",
@@ -95,7 +106,7 @@ router.post("/login", (req, res) => {
               });
             }
           );
-          // if there the two passwords do not match, send back a status of 404 and a message
+          // if the two passwords do not match, send back a status of 404 and a message
         } else {
           return res.status(400).json({ password: "Password incorrect." });
         }
