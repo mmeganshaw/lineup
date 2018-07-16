@@ -2,6 +2,11 @@
 const express = require("express");
 // requiring and initializing mongoose
 const mongoose = require("mongoose");
+// requiring body parser and its middleware
+const bodyParser = require("body-parser");
+
+// bringing in passport
+const passport = require("passport");
 
 // bringing in routes
 const auth = require("./routes/api/auth.js");
@@ -23,7 +28,18 @@ mongoose
   .catch(err => console.log(err));
 
 // creating an express route for our homepage
-app.get("/", (req, res) => res.send("Hello World"));
+// app.get("/", (req, res) => res.send("Hello World"));
+
+// Setting up bodyParser middleware
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+
+// Passport middleware
+app.use(passport.initialize());
+
+// Passport JWT Config
+
+require("./config/passport.js")(passport);
 
 // Use Routes
 app.use("/api/auth", auth);
