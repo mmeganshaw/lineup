@@ -6,6 +6,9 @@ const mongoose = require("mongoose");
 // bringing in passport for user validation
 const passport = require("passport");
 
+// Load Validation
+const validateProfileInput = require("../../validation/profile");
+
 // bringing in our models
 const Profile = require("../../models/Profile");
 const User = require("../../models/User");
@@ -26,6 +29,7 @@ router.get(
     const errors = {};
     // using our Mongoose model to find the user associated with the ID of the logged in user
     Profile.findOne({ user: req.user.id })
+      .populate("user", ["name", "avatar"])
       // if there is not a profile, send an error message and a 404 status
       .then(profile => {
         if (!profile) {
@@ -46,22 +50,31 @@ router.post(
   "/",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    // Get fields
+    const { errors, isValid } = validateProfileInput(req.body);
+
+    // Check Validation
+    if (!isValid) {
+      // Return any errors with 400 status
+      return res.status(400).json(errors);
+    }
+
+    // Setting profile fields
     const profileFields = {};
-    // setting our user to the request
+    // Setting the user in profileFields to the logged in users id in req.user
     profileFields.user = req.user.id;
-    // if there was a handle passed into the form, set that variable to our profile fields handle
     if (req.body.handle) profileFields.handle = req.body.handle;
     if (req.body.company) profileFields.company = req.body.company;
     if (req.body.website) profileFields.website = req.body.website;
     if (req.body.location) profileFields.location = req.body.location;
     if (req.body.bio) profileFields.bio = req.body.bio;
+    if (req.body.status) profileFields.status = req.body.status;
     if (req.body.githubusername)
       profileFields.githubusername = req.body.githubusername;
-    // Split skills array
+    // Skills - Spilt into array
     if (typeof req.body.skills !== "undefined") {
       profileFields.skills = req.body.skills.split(",");
     }
+
     // Social
     profileFields.social = {};
     if (req.body.youtube) profileFields.social.youtube = req.body.youtube;
@@ -72,26 +85,28 @@ router.post(
 
     Profile.findOne({ user: req.user.id }).then(profile => {
       if (profile) {
-        // Update profile
+        // Update
         Profile.findOneAndUpdate(
           { user: req.user.id },
           { $set: profileFields },
           { new: true }
-        )
-          // update the profile with the new fields, and then respond with that profile
-          .then(profile => res.json(profile));
+        ).then(profile => res.json(profile));
       } else {
+        // Create
+
         // Check if handle exists
         Profile.findOne({ handle: profileFields.handle }).then(profile => {
           if (profile) {
             errors.handle = "That handle already exists";
             res.status(400).json(errors);
           }
-          // Create Profile if the tests are passed
+
+          // Save Profile
           new Profile(profileFields).save().then(profile => res.json(profile));
         });
       }
     });
   }
 );
+
 module.exports = router;
